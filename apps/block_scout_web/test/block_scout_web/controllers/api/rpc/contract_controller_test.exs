@@ -1116,7 +1116,7 @@ defmodule BlockScoutWeb.API.RPC.ContractControllerTest do
           transaction: transaction,
           index: 1,
           block_hash: transaction.block_hash,
-          block_index: transaction.index
+          transaction_index: transaction.index
         )
 
       address = internal_transaction.created_contract_address
@@ -1171,7 +1171,7 @@ defmodule BlockScoutWeb.API.RPC.ContractControllerTest do
         index: 0,
         created_contract_address: contract_address,
         block_hash: transaction.block_hash,
-        block_index: transaction.index
+        transaction_index: transaction.index
       )
 
       assert %{

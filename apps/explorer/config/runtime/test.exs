@@ -42,8 +42,6 @@ config :explorer, Explorer.Tracer, disabled?: false
 
 config :explorer, Explorer.TokenInstanceOwnerAddressMigration.Supervisor, enabled: false
 
-config :explorer, Explorer.Migrator.CompletionChecker, enabled: false
-
 config :explorer, Explorer.Utility.RateLimiter, enabled: false
 
 config :explorer, Explorer.Utility.Hammer.Redis, enabled: false
@@ -103,7 +101,8 @@ for migrator <- [
       Explorer.Migrator.HeavyDbIndexOperation.CreateLogsDepositsWithdrawalsIndex,
       Explorer.Migrator.HeavyDbIndexOperation.CreateAddressesTransactionsCountDescPartialIndex,
       Explorer.Migrator.HeavyDbIndexOperation.CreateAddressesTransactionsCountAscCoinBalanceDescHashPartialIndex,
-      Explorer.Migrator.HeavyDbIndexOperation.CreateInternalTransactionsBlockHashTransactionIndexIndexUniqueIndex
+      Explorer.Migrator.HeavyDbIndexOperation.CreateInternalTransactionsBlockHashTransactionIndexIndexUniqueIndex,
+      Explorer.Migrator.HeavyDbIndexOperation.UpdateInternalTransactionsPrimaryKey
     ] do
   config :explorer, migrator, enabled: false
 end
