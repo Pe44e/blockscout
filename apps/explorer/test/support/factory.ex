@@ -196,19 +196,6 @@ defmodule Explorer.Factory do
     %{"contract_address_hash" => contract_address_hash, "name" => sequence("test"), "abi" => contract_code_info().abi}
   end
 
-  def public_tags_request_factory do
-    %{
-      "full_name" => sequence("full name"),
-      "email" => sequence(:email, &"test_user-#{&1}@blockscout.com"),
-      "tags" => Enum.join(Enum.map(1..Enum.random(1..2), fn _ -> sequence("Tag") end), ";"),
-      "website" => sequence("website"),
-      "additional_comment" => sequence("additional_comment"),
-      "addresses" => Enum.map(1..Enum.random(1..10), fn _ -> to_string(build(:address).hash) end),
-      "company" => sequence("company"),
-      "is_owner" => random_bool()
-    }
-  end
-
   def account_watchlist_factory do
     %Watchlist{
       identity: build(:account_identity)
@@ -264,6 +251,37 @@ defmodule Explorer.Factory do
       watch_erc_404_input: random_bool(),
       watch_erc_404_output: random_bool(),
       notify_email: random_bool()
+    }
+  end
+
+  def multichain_search_db_export_token_info_queue_factory do
+    [data_type] = Enum.take_random([:metadata, :total_supply, :counters, :market_data], 1)
+
+    data =
+      case data_type do
+        :metadata ->
+          %{
+            token_type: "ERC-20",
+            name: sequence("TokenName"),
+            symbol: sequence("TS"),
+            decimals: 18,
+            total_supply: "1000"
+          }
+
+        :total_supply ->
+          %{total_supply: "1000"}
+
+        :counters ->
+          %{transfers_count: "456", holders_count: "123"}
+
+        :market_data ->
+          %{fiat_value: "123.456", circulating_market_cap: "1000.0001"}
+      end
+
+    %MultichainSearchDb.TokenInfoExportQueue{
+      address_hash: address_hash().bytes,
+      data_type: data_type,
+      data: data
     }
   end
 

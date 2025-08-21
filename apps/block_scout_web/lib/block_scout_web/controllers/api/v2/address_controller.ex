@@ -19,7 +19,6 @@ defmodule BlockScoutWeb.API.V2.AddressController do
   import BlockScoutWeb.PagingHelper,
     only: [
       addresses_sorting: 1,
-      delete_parameters_from_next_page_params: 1,
       token_transfers_types_options: 1,
       address_transactions_sorting: 1,
       nft_types_options: 1
@@ -80,14 +79,26 @@ defmodule BlockScoutWeb.API.V2.AddressController do
     api?: true
   ]
 
+  case @chain_type do
+    :celo ->
+      @chain_type_address_necessity_by_association %{
+        :celo_account => :optional
+      }
+
+    _ ->
+      @chain_type_address_necessity_by_association %{}
+  end
+
   @address_options [
-    necessity_by_association: %{
-      :names => :optional,
-      :scam_badge => :optional,
-      :token => :optional,
-      :signed_authorization => :optional,
-      :smart_contract => :optional
-    },
+    necessity_by_association:
+      %{
+        :names => :optional,
+        :scam_badge => :optional,
+        :token => :optional,
+        :signed_authorization => :optional,
+        :smart_contract => :optional
+      }
+      |> Map.merge(@chain_type_address_necessity_by_association),
     api?: true
   ]
 
@@ -223,6 +234,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
   @spec counters(Plug.Conn.t(), map()) :: {:format, :error} | {:restricted_access, true} | Plug.Conn.t()
   def counters(conn, %{address_hash_param: address_hash_string} = params) do
     with {:ok, address_hash} <- validate_address_hash(address_hash_string, params) do
+      # TODO: check if @address_options is needed here
       case Chain.hash_to_address(address_hash, @address_options) do
         {:ok, address} ->
           {validation_count} = Counters.address_counters(address, @api_true)
@@ -374,7 +386,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
             next_page
             |> next_page_params(
               transactions,
-              delete_parameters_from_next_page_params(params),
+              params,
               &Transaction.address_transactions_next_page_params/1
             )
 
@@ -476,7 +488,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
 
           next_page_params =
             next_page
-            |> token_transfers_next_page_params(token_transfers, delete_parameters_from_next_page_params(params))
+            |> token_transfers_next_page_params(token_transfers, params)
 
           conn
           |> put_status(200)
@@ -561,7 +573,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
           {internal_transactions, next_page} = split_list_by_page(results_plus_one)
 
           next_page_params =
-            next_page |> next_page_params(internal_transactions, delete_parameters_from_next_page_params(params))
+            next_page |> next_page_params(internal_transactions, params)
 
           conn
           |> put_status(200)
@@ -636,7 +648,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
 
           {logs, next_page} = split_list_by_page(results_plus_one)
 
-          next_page_params = next_page |> next_page_params(logs, delete_parameters_from_next_page_params(params))
+          next_page_params = next_page |> next_page_params(logs, params)
 
           conn
           |> put_status(200)
@@ -710,7 +722,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
           results_plus_one = Chain.get_blocks_validated_by_address(full_options, address_hash)
           {blocks, next_page} = split_list_by_page(results_plus_one)
 
-          next_page_params = next_page |> next_page_params(blocks, delete_parameters_from_next_page_params(params))
+          next_page_params = next_page |> next_page_params(blocks, params)
 
           conn
           |> put_status(200)
@@ -769,7 +781,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
           {coin_balances, next_page} = split_list_by_page(results_plus_one)
 
           next_page_params =
-            next_page |> next_page_params(coin_balances, delete_parameters_from_next_page_params(params))
+            next_page |> next_page_params(coin_balances, params)
 
           conn
           |> put_status(200)
@@ -904,7 +916,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
             next_page
             |> next_page_params(
               tokens,
-              delete_parameters_from_next_page_params(params),
+              params,
               &paging_params_with_fiat_value/1
             )
 
@@ -961,7 +973,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
           withdrawals_plus_one = address_hash |> Chain.address_hash_to_withdrawals(options)
           {withdrawals, next_page} = split_list_by_page(withdrawals_plus_one)
 
-          next_page_params = next_page |> next_page_params(withdrawals, delete_parameters_from_next_page_params(params))
+          next_page_params = next_page |> next_page_params(withdrawals, params)
 
           conn
           |> put_status(200)
@@ -1040,7 +1052,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
       |> Address.list_top_addresses()
       |> split_list_by_page()
 
-    next_page_params = next_page_params(next_page, addresses, delete_parameters_from_next_page_params(params))
+    next_page_params = next_page_params(next_page, addresses, params)
 
     exchange_rate = Market.get_coin_exchange_rate()
     total_supply = Chain.total_supply()
@@ -1190,7 +1202,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
             next_page
             |> next_page_params(
               nfts,
-              delete_parameters_from_next_page_params(params),
+              params,
               &Instance.nft_list_next_page_params/1
             )
 
@@ -1266,7 +1278,7 @@ defmodule BlockScoutWeb.API.V2.AddressController do
             next_page
             |> next_page_params(
               collections,
-              delete_parameters_from_next_page_params(params),
+              params,
               &Instance.nft_collections_next_page_params/1
             )
 
@@ -1326,7 +1338,6 @@ defmodule BlockScoutWeb.API.V2.AddressController do
 
       filtered_params =
         params
-        |> delete_parameters_from_next_page_params()
         |> Map.drop([
           "epoch_number",
           "amount",

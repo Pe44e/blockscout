@@ -6,8 +6,53 @@ defmodule BlockScoutWeb.Schemas.API.V2.Address.Response.ChainTypeCustomizations 
 
   @filecoin_robust_address_schema %Schema{
     type: :string,
+    description: "Robust f0/f1/f2/f3/f4 Filecoin address",
     example: "f25nml2cfbljvn4goqtclhifepvfnicv6g7mfmmvq",
     nullable: true
+  }
+
+  @zilliqa_schema %Schema{
+    type: :object,
+    properties: %{
+      is_scilla_contract: %Schema{type: :boolean, nullable: false}
+    },
+    required: [:is_scilla_contract]
+  }
+
+  @celo_schema %Schema{
+    type: :object,
+    properties: %{
+      account: %Schema{
+        type: :object,
+        nullable: true,
+        properties: %{
+          type: %Schema{
+            type: :string,
+            enum: [:regular, :validator, :group],
+            nullable: true
+          },
+          name: %Schema{type: :string, nullable: true},
+          metadata_url: %Schema{type: :string, nullable: true},
+          nonvoting_locked_celo: %Schema{type: :string, nullable: true},
+          locked_celo: %Schema{type: :string, nullable: true}
+        },
+        required: [
+          :type,
+          :name,
+          :metadata_url,
+          :nonvoting_locked_celo,
+          :locked_celo
+        ],
+        example: %{
+          type: "validator",
+          name: "Celo Validator",
+          metadata_url: "https://example.com/metadata",
+          nonvoting_locked_celo: "1000000000000000000",
+          locked_celo: "2000000000000000000"
+        }
+      }
+    },
+    required: [:account]
   }
 
   @doc """
@@ -29,7 +74,13 @@ defmodule BlockScoutWeb.Schemas.API.V2.Address.Response.ChainTypeCustomizations 
 
       :zilliqa ->
         schema
-        |> put_in([:properties, :is_scilla_contract], %Schema{type: :boolean, nullable: false})
+        |> put_in([:properties, :zilliqa], @zilliqa_schema)
+        |> update_in([:required], &[:zilliqa | &1])
+
+      :celo ->
+        schema
+        |> put_in([:properties, :celo], @celo_schema)
+        |> update_in([:required], &[:celo | &1])
 
       _ ->
         schema

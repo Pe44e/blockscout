@@ -386,7 +386,7 @@ defmodule BlockScoutWeb.Routers.ApiRouter do
         end
       end
 
-      # deprecate in the next major/minor release after 9.0.0
+      # todo: deprecate in the next major/minor release in 10.0.0. Related frontend task https://github.com/blockscout/frontend/issues/2945.
       scope "/3dparty" do
         get("/:platform_id", V2.Proxy.UniversalProxyController, :index)
 
@@ -564,15 +564,26 @@ defmodule BlockScoutWeb.Routers.ApiRouter do
     if @reading_enabled do
       post("/eth-rpc", EthRPC.EthController, :eth_request)
 
-      forward("/", RPCTranslatorForwarder, %{
-        "block" => {RPC.BlockController, []},
-        "account" => {RPC.AddressController, []},
-        "logs" => {RPC.LogsController, []},
-        "token" => {RPC.TokenController, []},
-        "stats" => {RPC.StatsController, []},
-        "contract" => {RPC.ContractController, [:verify]},
-        "transaction" => {RPC.TransactionController, []}
-      })
+      forward(
+        "/",
+        RPCTranslatorForwarder,
+        %{
+          "block" => {RPC.BlockController, []},
+          "account" => {RPC.AddressController, []},
+          "logs" => {RPC.LogsController, []},
+          "token" => {RPC.TokenController, []},
+          "stats" => {RPC.StatsController, []},
+          "contract" => {RPC.ContractController, [:verify]},
+          "transaction" => {RPC.TransactionController, []}
+        }
+        |> then(fn options ->
+          if @chain_type == :celo do
+            Map.put(options, "epoch", {BlockScoutWeb.API.RPC.CeloController, []})
+          else
+            options
+          end
+        end)
+      )
     end
   end
 end

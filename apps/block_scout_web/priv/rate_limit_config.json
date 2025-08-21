@@ -2,6 +2,12 @@
   "api/v2/key": {
     "ignore": true
   },
+  "api/v2/import/token-info": {
+    "ignore": true
+  },
+  "api/v2/import/smart-contracts/:param": {
+    "ignore": true
+  },
   "api/account/v2/authenticate_via_wallet": {
     "recaptcha_to_bypass_429": true,
     "ip": {
@@ -16,6 +22,13 @@
       "period": "1h",
       "limit": 1
     },
+    "isolate_rate_limit?": true
+  },
+  "api/account/v2/user/info": {
+    "static_api_key": true,
+    "whitelisted_ip": true,
+    "ip": true,
+    "temporary_token": true,
     "isolate_rate_limit?": true
   },
   "api/v2/tokens/:param/instances/:param/refetch-metadata": {
@@ -94,9 +107,22 @@
     },
     "isolate_rate_limit?": true
   },
+  "api/health/*": {
+    "ip": {
+      "period": "1s",
+      "limit": 5
+    },
+    "isolate_rate_limit?": true
+  },
   "api/v2/*": {
     "static_api_key": true,
     "account_api_key": true,
+    "whitelisted_ip": true,
+    "ip": true,
+    "temporary_token": true
+  },
+  "api/account/v2/*": {
+    "static_api_key": true,
     "whitelisted_ip": true,
     "ip": true,
     "temporary_token": true

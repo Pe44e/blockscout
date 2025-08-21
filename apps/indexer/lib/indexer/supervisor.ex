@@ -25,6 +25,7 @@ defmodule Indexer.Supervisor do
   alias Indexer.Fetcher.CoinBalance.Realtime, as: CoinBalanceRealtime
   alias Indexer.Fetcher.MultichainSearchDb.BalancesExportQueue, as: MultichainSearchDbBalancesExportQueue
   alias Indexer.Fetcher.MultichainSearchDb.MainExportQueue, as: MultichainSearchDbMainExportQueue
+  alias Indexer.Fetcher.MultichainSearchDb.TokenInfoExportQueue, as: MultichainSearchDbTokenInfoExportQueue
   alias Indexer.Fetcher.Stability.Validator, as: ValidatorStability
   alias Indexer.Fetcher.TokenInstance.Realtime, as: TokenInstanceRealtime
   alias Indexer.Fetcher.TokenInstance.Retry, as: TokenInstanceRetry
@@ -33,6 +34,7 @@ defmodule Indexer.Supervisor do
   alias Indexer.Fetcher.TokenInstance.SanitizeERC721, as: TokenInstanceSanitizeERC721
 
   alias Indexer.Fetcher.{
+    AddressNonceUpdater,
     BlockReward,
     ContractCode,
     EmptyBlocksSanitizer,
@@ -43,6 +45,7 @@ defmodule Indexer.Supervisor do
     RootstockData,
     Token,
     TokenBalance,
+    TokenCountersUpdater,
     TokenTotalSupplyUpdater,
     TokenUpdater,
     TransactionAction,
@@ -149,9 +152,12 @@ defmodule Indexer.Supervisor do
          [[json_rpc_named_arguments: json_rpc_named_arguments, memory_monitor: memory_monitor]]},
         {TokenUpdater.Supervisor,
          [[json_rpc_named_arguments: json_rpc_named_arguments, memory_monitor: memory_monitor]]},
+        {TokenCountersUpdater.Supervisor,
+         [[json_rpc_named_arguments: json_rpc_named_arguments, memory_monitor: memory_monitor]]},
         {ReplacedTransaction.Supervisor, [[memory_monitor: memory_monitor]]},
         {MultichainSearchDbMainExportQueue.Supervisor, [[memory_monitor: memory_monitor]]},
         {MultichainSearchDbBalancesExportQueue.Supervisor, [[memory_monitor: memory_monitor]]},
+        {MultichainSearchDbTokenInfoExportQueue.Supervisor, [[memory_monitor: memory_monitor]]},
         {Indexer.Fetcher.RollupL1ReorgMonitor.Supervisor, [[memory_monitor: memory_monitor]]},
         configure(
           Indexer.Fetcher.Optimism.TransactionBatch.Supervisor,
@@ -245,6 +251,9 @@ defmodule Indexer.Supervisor do
         configure(Indexer.Fetcher.Celo.EpochBlockOperations.Supervisor, [
           [json_rpc_named_arguments: json_rpc_named_arguments, memory_monitor: memory_monitor]
         ]),
+        configure(Indexer.Fetcher.Celo.Legacy.Account.Supervisor, [
+          [json_rpc_named_arguments: json_rpc_named_arguments, memory_monitor: memory_monitor]
+        ]),
         {Indexer.Fetcher.Filecoin.AddressInfo.Supervisor,
          [
            [
@@ -261,6 +270,7 @@ defmodule Indexer.Supervisor do
         {EmptyBlocksSanitizer.Supervisor, [[json_rpc_named_arguments: json_rpc_named_arguments]]},
         {PendingTransactionsSanitizer, [[json_rpc_named_arguments: json_rpc_named_arguments]]},
         {TokenTotalSupplyUpdater, [[]]},
+        AddressNonceUpdater,
 
         # Notifications cleaner
         configure(EventNotificationsCleaner, [[]]),

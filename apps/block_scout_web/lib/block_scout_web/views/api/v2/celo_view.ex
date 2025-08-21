@@ -12,8 +12,8 @@ defmodule BlockScoutWeb.API.V2.CeloView do
   alias Explorer.Chain
   alias Explorer.Chain.Cache.{CeloCoreContracts, CeloEpochs}
   alias Explorer.Chain.Celo.Helper, as: CeloHelper
-  alias Explorer.Chain.Celo.{Epoch, EpochReward}
-  alias Explorer.Chain.{Block, Token, TokenTransfer, Transaction, Wei}
+  alias Explorer.Chain.Celo.{Account, Epoch, EpochReward}
+  alias Explorer.Chain.{Address, Block, Token, TokenTransfer, Transaction, Wei}
 
   @address_params [
     necessity_by_association: %{
@@ -178,7 +178,13 @@ defmodule BlockScoutWeb.API.V2.CeloView do
     end)
   end
 
-  defp epoch_type(epoch) do
+  @doc """
+  Returns the type of the epoch based on its number. If the epoch number is less
+  than the migration epoch number, it returns "L1", otherwise "L2". This is used
+  to differentiate between the two eras of Celo epochs.
+  """
+  @spec epoch_type(Epoch.t()) :: String.t()
+  def epoch_type(epoch) do
     epoch.number
     |> CeloHelper.pre_migration_epoch_number?()
     |> if(do: "L1", else: "L2")
@@ -219,6 +225,29 @@ defmodule BlockScoutWeb.API.V2.CeloView do
       |> maybe_add_base_fee_info(block, single_block?)
 
     Map.put(out_json, :celo, celo_json)
+  end
+
+  def extend_address_json_response(out_json, %Address{} = address) do
+    account_json =
+      address
+      |> Map.get(:celo_account)
+      |> case do
+        %Account{} = account ->
+          %{
+            type: account.type,
+            name: account.name,
+            metadata_url: account.metadata_url,
+            nonvoting_locked_celo: account.nonvoting_locked_celo,
+            locked_celo: account.locked_celo
+          }
+
+        _ ->
+          nil
+      end
+
+    Map.put(out_json, :celo, %{
+      account: account_json
+    })
   end
 
   @doc """
@@ -358,12 +387,12 @@ defmodule BlockScoutWeb.API.V2.CeloView do
 
   ## Example
       iex> transfers = %{
-      ...>   reserve_bolster_transfer: %{"token" => %{"address" => "0xABC..."}, "total" => %{"value" => Decimal.new("100")}},
-      ...>   community_transfer: %{"token" => %{"address" => "0xABC..."}, "total" => %{"value" => Decimal.new("200")}}
+      ...>   reserve_bolster_transfer: %{"token" => %{"address_hash" => "0xABC..."}, "total" => %{"value" => Decimal.new("100")}},
+      ...>   community_transfer: %{"token" => %{"address_hash" => "0xABC..."}, "total" => %{"value" => Decimal.new("200")}}
       ...> }
       iex> calculate_total_epoch_rewards(transfers)
       %{
-        token: %{"address" => "0xABC...", ...},
+        token: %{"address_hash" => "0xABC...", ...},
         total: %{decimals: Decimal.new("18"), value: Decimal.new("300")}
       }
   """
@@ -443,7 +472,7 @@ defmodule BlockScoutWeb.API.V2.CeloView do
   defp fee_handler_base_fee_breakdown(base_fee, block_number) do
     with {:ok, fee_handler_contract_address_hash} <-
            CeloCoreContracts.get_address(:fee_handler, block_number),
-         {:ok, %{"address" => fee_beneficiary_address_hash}} <-
+         {:ok, %{"address_hash" => fee_beneficiary_address_hash}} <-
            CeloCoreContracts.get_event(:fee_handler, :fee_beneficiary_set, block_number),
          {:ok, %{"value" => burn_fraction_fixidity_lib}} <-
            CeloCoreContracts.get_event(:fee_handler, :burn_fraction_set, block_number),

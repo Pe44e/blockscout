@@ -328,7 +328,6 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
                "implementations" => [
                  %{
                    "address_hash" => ^checksummed_implementation_contract_address_hash,
-                   "address" => ^checksummed_implementation_contract_address_hash,
                    "name" => ^name
                  }
                ]
@@ -383,7 +382,6 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
                "implementations" => [
                  %{
                    "address_hash" => ^implementation_address_hash_string,
-                   "address" => ^implementation_address_hash_string,
                    "name" => nil
                  }
                ]
@@ -460,7 +458,6 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
                "implementations" => [
                  %{
                    "address_hash" => ^implementation_address_hash_string,
-                   "address" => ^implementation_address_hash_string,
                    "name" => nil
                  }
                ]
@@ -621,7 +618,7 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
 
       insert(:block, miner: address)
 
-      Counters.transaction_count(address)
+      Counters.transactions_count(address)
       Counters.token_transfers_count(address)
       Counters.gas_usage_count(address)
 
@@ -3104,6 +3101,21 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
       check_paginated_response(response, response_2nd_page, ctbs_erc_1155)
       assert_schema(response, "AddressTokensPaginatedResponse", BlockScoutWeb.ApiSpec.spec())
       assert_schema(response_2nd_page, "AddressTokensPaginatedResponse", BlockScoutWeb.ApiSpec.spec())
+
+      # Test multiple token types (the fix for the original issue)
+      filter = %{"type" => "ERC-721,ERC-1155"}
+      request = get(conn, "/api/v2/addresses/#{address.hash}/tokens", filter)
+      assert response = json_response(request, 200)
+
+      # Verify we get tokens from both types
+      response_token_types =
+        response["items"]
+        |> Enum.map(fn item -> item["token"]["type"] end)
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      assert response_token_types == ["ERC-1155", "ERC-721"]
+      assert_schema(response, "AddressTokensPaginatedResponse", BlockScoutWeb.ApiSpec.spec())
     end
   end
 
@@ -3376,14 +3388,14 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
                      :timer.seconds(1)
 
       assert Decimal.to_integer(ctb_erc_20["value"]) ==
-               other_balances[ctb_erc_20["token"]["address"] |> String.downcase()]
+               other_balances[ctb_erc_20["token"]["address_hash"] |> String.downcase()]
 
       assert Decimal.to_integer(ctb_erc_721["value"]) ==
-               other_balances[ctb_erc_721["token"]["address"] |> String.downcase()]
+               other_balances[ctb_erc_721["token"]["address_hash"] |> String.downcase()]
 
       assert Decimal.to_integer(ctb_erc_1155["value"]) ==
                balances_erc_1155[
-                 {ctb_erc_1155["token"]["address"] |> String.downcase(), to_string(ctb_erc_1155["token_id"])}
+                 {ctb_erc_1155["token"]["address_hash"] |> String.downcase(), to_string(ctb_erc_1155["token_id"])}
                ]
     end
   end
@@ -4459,7 +4471,7 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
 
   defp compare_item(%Address{} = address, json) do
     assert Address.checksum(address.hash) == json["hash"]
-    assert to_string(address.transactions_count) == json["transaction_count"]
+    assert to_string(address.transactions_count) == json["transactions_count"]
   end
 
   defp compare_item(%Transaction{} = transaction, json) do
@@ -4510,12 +4522,12 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
   end
 
   defp compare_item(%Token{} = token, json) do
-    assert Address.checksum(token.contract_address_hash) == json["address"]
+    assert Address.checksum(token.contract_address_hash) == json["address_hash"]
     assert to_string(token.symbol) == json["symbol"]
     assert to_string(token.name) == json["name"]
     assert to_string(token.type) == json["type"]
     assert to_string(token.decimals) == json["decimals"]
-    assert (token.holder_count && to_string(token.holder_count)) == json["holders"]
+    assert (token.holder_count && to_string(token.holder_count)) == json["holders_count"]
     assert Map.has_key?(json, "exchange_rate")
   end
 
@@ -4549,7 +4561,7 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
              "id" => ^id,
              "metadata" => ^metadata,
              "owner" => nil,
-             "token" => %{"address" => ^token_address_hash, "name" => ^token_name, "type" => ^token_type},
+             "token" => %{"address_hash" => ^token_address_hash, "name" => ^token_name, "type" => ^token_type},
              "external_app_url" => ^app_url,
              "animation_url" => ^animation_url,
              "image_url" => ^image_url,
@@ -4573,7 +4585,7 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
     end)
 
     assert %{
-             "token" => %{"address" => ^token_address_hash, "name" => ^token_name, "type" => ^token_type},
+             "token" => %{"address_hash" => ^token_address_hash, "name" => ^token_name, "type" => ^token_type},
              "amount" => ^amount
            } = json
   end
@@ -4594,7 +4606,7 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
     end)
 
     assert %{
-             "token" => %{"address" => ^token_address_hash, "name" => ^token_name, "type" => ^token_type},
+             "token" => %{"address_hash" => ^token_address_hash, "name" => ^token_name, "type" => ^token_type},
              "amount" => ^amount
            } = json
   end
