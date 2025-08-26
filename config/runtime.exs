@@ -1542,6 +1542,20 @@ config :nft_media_handler, Indexer.NFTMediaHandler.Backfiller,
 config :indexer, Indexer.Fetcher.Zilliqa.ScillaSmartContracts.Supervisor,
   disabled?: ConfigHelper.chain_type() != :zilliqa
 
+config :libcluster,
+  topologies: [
+    test: [
+      strategy: Cluster.Strategy.Kubernetes,
+      config: [
+        kubernetes_node_basename: "blockscout",
+        kubernetes_namespace: System.get_env("K8S_NAMESPACE"),
+        kubernetes_selector: System.get_env("K8S_SELECTOR"),
+        mode: :dns,
+        kubernetes_ip_lookup_mode: :pods
+      ]
+    ]
+  ]
+
 Code.require_file("#{config_env()}.exs", "config/runtime")
 
 for config <- "../apps/*/config/runtime/#{config_env()}.exs" |> Path.expand(__DIR__) |> Path.wildcard() do
