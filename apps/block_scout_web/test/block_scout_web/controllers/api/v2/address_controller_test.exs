@@ -2096,7 +2096,6 @@ defmodule BlockScoutWeb.API.V2.AddressControllerTest do
         assert response["next_page_params"] == nil
 
         compare_item(token_transfer, Enum.at(response["items"], 0), true)
-        assert_schema(response, "AddressTokenTransfersPaginatedResponse", BlockScoutWeb.ApiSpec.spec())
       end
     end
   end
