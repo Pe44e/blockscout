@@ -1545,13 +1545,10 @@ config :indexer, Indexer.Fetcher.Zilliqa.ScillaSmartContracts.Supervisor,
 config :libcluster,
   topologies: [
     test: [
-      strategy: Cluster.Strategy.Kubernetes,
+      strategy: Cluster.Strategy.Kubernetes.DNS,
       config: [
-        kubernetes_node_basename: "blockscout",
-        kubernetes_namespace: System.get_env("K8S_NAMESPACE"),
-        kubernetes_selector: System.get_env("K8S_SELECTOR"),
-        mode: :dns,
-        kubernetes_ip_lookup_mode: :pods
+        service: System.get_env("K8S_SERVICE"),
+        application_name: "blockscout"
       ]
     ]
   ]
